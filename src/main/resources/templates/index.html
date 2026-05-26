@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Today's Lunch</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css"/>
+    <link rel="stylesheet" th:href="@{/style.css}"/>
+</head>
+<body class="has-background-light">
+
+<nav class="navbar is-primary is-fixed-top" role="navigation">
+    <div class="navbar-brand">
+        <span class="navbar-item has-text-weight-bold is-size-5">🍱 Daily Takeout</span>
+    </div>
+    <div class="navbar-end">
+        <span class="navbar-item"
+              th:text="'👋 ' + ${view.currentUser}"></span>
+        <span class="navbar-item"
+              th:text="${#temporals.format(view.date, 'EEEE, MMM d')}"></span>
+    </div>
+</nav>
+
+<section class="section" style="padding-top: 4.5rem;">
+<div class="container">
+<div class="columns is-variable is-4">
+
+    <!-- LEFT COLUMN: status + proposals -->
+    <div class="column is-8">
+
+        <!-- STATUS PANEL -->
+        <div id="status-panel" class="box">
+            <h2 class="subtitle mb-3"><strong>Your Status</strong></h2>
+            <div class="buttons">
+                <button id="btn-has-food"
+                        class="button is-medium"
+                        th:classappend="${view.currentUserStatus?.name() == 'HAS_FOOD'} ? ' is-success' : ''"
+                        onclick="setStatus('HAS_FOOD')">
+                    🥗 Has Food
+                </button>
+                <button id="btn-ordering"
+                        class="button is-medium"
+                        th:classappend="${view.currentUserStatus?.name() == 'ORDERING'} ? ' is-warning' : ''"
+                        onclick="setStatus('ORDERING')">
+                    🛵 Ordering
+                </button>
+            </div>
+        </div>
+
+        <!-- PROPOSALS PANEL -->
+        <div id="proposals-panel" class="box">
+            <h2 class="subtitle mb-3"><strong>Restaurant Proposals</strong></h2>
+
+            <div id="proposals-list">
+                <div th:if="${#lists.isEmpty(view.proposals)}"
+                     class="has-text-grey has-text-centered py-4">
+                    No proposals yet. Be the first to suggest a restaurant!
+                </div>
+                <div class="proposal-row level is-mobile mb-3"
+                     th:each="p : ${view.proposals}">
+                    <div class="level-left">
+                        <div>
+                            <span class="has-text-weight-semibold"
+                                  th:text="${p.restaurant}"></span>
+                            <span class="tag is-info is-light ml-2"
+                                  th:text="${p.voteCount} + (${p.voteCount} == 1 ? ' vote' : ' votes')"></span>
+                        </div>
+                    </div>
+                    <div class="level-right">
+                        <button th:if="${!p.votedByCurrentUser}"
+                                class="button is-small is-primary is-outlined"
+                                th:onclick="'castVote(' + ${p.id} + ')'">
+                            👍 Vote
+                        </button>
+                        <button th:if="${p.votedByCurrentUser}"
+                                class="button is-small is-danger is-outlined"
+                                th:onclick="'retractVote(' + ${p.id} + ')'">
+                            ✕ Unvote
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="proposal-input-row"
+                 th:style="${view.currentUserStatus?.name() == 'ORDERING'} ? '' : 'display:none'"
+                 class="field has-addons mt-4">
+                <div class="control is-expanded">
+                    <input id="restaurant-input"
+                           class="input"
+                           type="text"
+                           placeholder="Suggest a restaurant…"
+                           onkeydown="if(event.key==='Enter') addProposal()"/>
+                </div>
+                <div class="control">
+                    <button class="button is-primary" onclick="addProposal()">Add</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: participants -->
+    <div class="column is-4">
+        <div id="participants-panel" class="box">
+            <h2 class="subtitle mb-3"><strong>Who's Here</strong></h2>
+            <div id="participants-list">
+                <div class="participant-row level is-mobile mb-2"
+                     th:each="p : ${view.participants}">
+                    <div class="level-left">
+                        <span th:text="${p.userName}"></span>
+                    </div>
+                    <div class="level-right">
+                        <span class="tag"
+                              th:classappend="${p.status?.name() == 'HAS_FOOD'} ? 'is-success is-light' : (${p.status?.name() == 'ORDERING'} ? 'is-warning is-light' : 'is-light')"
+                              th:text="${p.status != null} ? ${p.status.name().replace('_', ' ')} : 'Undecided'"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+</section>
+
+<script th:src="@{/app.js}"></script>
+</body>
+</html>

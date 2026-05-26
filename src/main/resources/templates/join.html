@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Join Today's Lunch</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css"/>
+</head>
+<body class="has-background-light">
+<section class="section">
+    <div class="container" style="max-width:480px">
+        <h1 class="title has-text-centered">🍱 Daily Takeout</h1>
+        <p class="subtitle has-text-centered">Coordinate lunch with your team</p>
+        <div class="card">
+            <div class="card-content">
+                <form th:action="@{/join}" th:object="${joinForm}" method="post">
+                    <div class="field">
+                        <label class="label">Your name</label>
+                        <div class="control has-icons-left">
+                            <input class="input"
+                                   th:classappend="${#fields.hasErrors('name')} ? 'is-danger'"
+                                   type="text"
+                                   th:field="*{name}"
+                                   placeholder="e.g. Alice"
+                                   autofocus/>
+                            <span class="icon is-left">
+                                <i>👤</i>
+                            </span>
+                        </div>
+                        <p class="help is-danger"
+                           th:if="${#fields.hasErrors('name')}"
+                           th:errors="*{name}"></p>
+                    </div>
+                    <div class="field mt-5">
+                        <button class="button is-primary is-fullwidth is-medium" type="submit">
+                            Join Today's Lunch
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>
