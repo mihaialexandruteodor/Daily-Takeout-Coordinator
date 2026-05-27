@@ -53,14 +53,17 @@ As this is a spring boot app with a Tomcat server, local run is available at `lo
 
 ---
 
-## Deploying to Koyeb (free)
+### Deployment
+Deployed to **Render** (free tier, no credit card, auto HTTPS). A `Dockerfile` at the repo root does a two-stage build (`eclipse-temurin:21-jdk-alpine` → `eclipse-temurin:21-jre-alpine`).
 
-Koyeb offers a free always-on tier with no credit card required. The repo is already configured for it — a `Dockerfile` at the root handles the build and `application-prod.properties` sets the production config.
+> **Note on persistence:** Render's free tier does not include persistent disk, so the H2 file at `/data/takeout` will not survive restarts/redeploys. For a daily lunch tool this is acceptable — data resets each deploy. If persistence is required, consider Oracle Cloud Free Tier (always-free VM with full disk control).
 
-1. Push the repo to GitHub
-2. Sign up at [koyeb.com](https://www.koyeb.com)
-3. Create a new **Service** → **GitHub** → select your repo
-4. Koyeb auto-detects the `Dockerfile` — no extra build config needed
-5. Add a **Persistent Volume** mounted at `/data` (this is where the H2 database file lives)
-6. Add the environment variable: `SPRING_PROFILES_ACTIVE=prod`
-7. Deploy — you get a free `*.koyeb.app` HTTPS URL
+**Deploy steps:**
+1. Push repo to GitHub
+2. Sign up at [render.com](https://render.com) (no credit card required)
+3. New Service → Web Service → connect GitHub repo (Render auto-detects the `Dockerfile`)
+4. Set environment variable: `SPRING_PROFILES_ACTIVE=prod`
+5. Remove any persistent volume config — not available on the free tier
+6. Deploy — a free `*.onrender.com` HTTPS URL is assigned automatically
+
+> **Note on cold starts:** Free web services spin down after 15 minutes of inactivity and take ~1 minute to wake on the next request.
