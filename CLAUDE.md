@@ -111,3 +111,9 @@ Main entry point: `DemoApplication.java` — standard `@SpringBootApplication` b
 - Profile-specific config goes in `application-{profile}.properties` alongside the base file
 - Test reports are written to `build/reports/tests/test/index.html`
 - VS Code debug config in `.vscode/launch.json` targets `DemoApplication` on the workspace folder
+
+## TO DO
+
+- Name tag next to each proposal
+- Timer
+- Limit proposals per user
