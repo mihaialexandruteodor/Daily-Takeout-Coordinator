@@ -4,42 +4,72 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Today's Lunch</title>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css"
-    />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css" />
     <link rel="stylesheet" th:href="@{/style.css}" />
+    <style>
+      /* ── Name-entry modal ── */
+      .name-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+      .name-modal-box {
+        background: #fff;
+        border-radius: 8px;
+        padding: 2rem 2.5rem;
+        max-width: 420px;
+        width: 90%;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        text-align: center;
+      }
+      .name-modal-box .modal-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+      .name-modal-box h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.4rem; }
+      .name-modal-box p  { color: #555; margin-bottom: 1.2rem; }
+      .name-modal-error  { color: #cc3333; font-size: 0.85rem; margin-top: 0.5rem; min-height: 1.2em; }
+    </style>
   </head>
   <body class="has-background-light">
+
+    <!-- ── Name-entry modal (shown when user has no cookie) ── -->
+    <div id="name-modal-overlay" class="name-modal-overlay"
+         th:style="${needsName} ? '' : 'display:none'">
+      <div class="name-modal-box">
+        <div class="modal-icon">🍱</div>
+        <h2>Who are you?</h2>
+        <p>Enter your name to join today's lunch session.</p>
+        <div class="field has-addons" style="justify-content:center">
+          <div class="control is-expanded">
+            <input id="modal-name-input" class="input" type="text"
+                   placeholder="Your name" maxlength="40" autofocus
+                   onkeydown="if(event.key==='Enter') submitModalName()" />
+          </div>
+          <div class="control">
+            <button class="button is-primary" onclick="submitModalName()">Join</button>
+          </div>
+        </div>
+        <div id="modal-name-error" class="name-modal-error"></div>
+      </div>
+    </div>
+
     <nav class="navbar is-primary is-fixed-top" role="navigation">
       <div class="navbar-brand">
-        <span class="navbar-item has-text-weight-bold is-size-5"
-          >🍱 Daily Takeout</span
-        >
+        <span class="navbar-item has-text-weight-bold is-size-5">🍱 Daily Takeout</span>
       </div>
       <div class="navbar-end">
-        <span class="navbar-item" th:text="'👋 ' + ${view.currentUser}"></span>
-        <span
-          class="navbar-item"
-          th:text="${#temporals.format(view.date, 'EEEE, MMM d')}"
-        ></span>
-        <a
-          class="navbar-item github-link"
-          href="https://github.com/mihaialexandruteodor"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <svg
-            class="github-icon"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            width="20"
-            height="20"
-          >
-            <path
-              d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"
-            />
+        <span class="navbar-item" th:text="'👋 ' + ${view.currentUser}"
+              id="nav-username"></span>
+        <span class="navbar-item"
+              th:text="${#temporals.format(view.date, 'EEEE, MMM d')}"></span>
+        <a class="navbar-item github-link"
+           href="https://github.com/mihaialexandruteodor"
+           target="_blank" rel="noopener noreferrer">
+          <svg class="github-icon" xmlns="http://www.w3.org/2000/svg"
+               viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
           </svg>
           <span class="ml-2">mihaialexandruteodor</span>
         </a>
@@ -49,100 +79,110 @@
     <section class="section" style="padding-top: 4.5rem">
       <div class="container">
         <div class="columns is-variable is-4">
-          <!-- LEFT COLUMN: status + proposals -->
+
+          <!-- LEFT COLUMN: status + proposals + time proposals -->
           <div class="column is-8">
+
             <!-- STATUS PANEL -->
             <div id="status-panel" class="box">
               <h2 class="subtitle mb-3"><strong>Your Status</strong></h2>
               <div class="buttons">
-                <button
-                  id="btn-has-food"
-                  class="button is-medium"
-                  th:classappend="${view.currentUserStatus?.name() == 'HAS_FOOD'} ? ' is-success' : ''"
-                  onclick="setStatus('HAS_FOOD')"
-                >
+                <button id="btn-has-food" class="button is-medium"
+                        th:classappend="${view.currentUserStatus?.name() == 'HAS_FOOD'} ? ' is-success' : ''"
+                        onclick="setStatus('HAS_FOOD')">
                   🥗 Has Food
                 </button>
-                <button
-                  id="btn-ordering"
-                  class="button is-medium"
-                  th:classappend="${view.currentUserStatus?.name() == 'ORDERING'} ? ' is-warning' : ''"
-                  onclick="setStatus('ORDERING')"
-                >
+                <button id="btn-ordering" class="button is-medium"
+                        th:classappend="${view.currentUserStatus?.name() == 'ORDERING'} ? ' is-warning' : ''"
+                        onclick="setStatus('ORDERING')">
                   🛵 Ordering
                 </button>
               </div>
             </div>
 
-            <!-- PROPOSALS PANEL -->
+            <!-- RESTAURANT PROPOSALS PANEL -->
             <div id="proposals-panel" class="box">
-              <h2 class="subtitle mb-3">
-                <strong>Restaurant Proposals</strong>
-              </h2>
-
+              <h2 class="subtitle mb-3"><strong>Restaurant Proposals</strong></h2>
               <div id="proposals-list">
-                <div
-                  th:if="${#lists.isEmpty(view.proposals)}"
-                  class="has-text-grey has-text-centered py-4"
-                >
+                <div th:if="${#lists.isEmpty(view.proposals)}"
+                     class="has-text-grey has-text-centered py-4">
                   No proposals yet. Be the first to suggest a restaurant!
                 </div>
-                <div
-                  class="proposal-row level is-mobile mb-3"
-                  th:each="p : ${view.proposals}"
-                >
+                <div class="proposal-row level is-mobile mb-3"
+                     th:each="p : ${view.proposals}">
                   <div class="level-left">
                     <div>
-                      <span
-                        class="has-text-weight-semibold"
-                        th:text="${p.restaurant}"
-                      ></span>
-                      <span
-                        class="tag is-info is-light ml-2"
-                        th:text="${p.voteCount} + (${p.voteCount} == 1 ? ' vote' : ' votes')"
-                      ></span>
+                      <span class="has-text-weight-semibold" th:text="${p.restaurant}"></span>
+                      <span class="tag is-info is-light ml-2"
+                            th:text="${p.voteCount} + (${p.voteCount} == 1 ? ' vote' : ' votes')"></span>
                     </div>
                   </div>
                   <div class="level-right">
-                    <button
-                      th:if="${!p.votedByCurrentUser}"
-                      class="button is-small is-primary is-outlined"
-                      th:onclick="'castVote(' + ${p.id} + ')'"
-                    >
-                      👍 Vote
-                    </button>
-                    <button
-                      th:if="${p.votedByCurrentUser}"
-                      class="button is-small is-danger is-outlined"
-                      th:onclick="'retractVote(' + ${p.id} + ')'"
-                    >
-                      ✕ Unvote
-                    </button>
+                    <button th:if="${!p.votedByCurrentUser}"
+                            class="button is-small is-primary is-outlined"
+                            th:onclick="'castVote(' + ${p.id} + ')'">👍 Vote</button>
+                    <button th:if="${p.votedByCurrentUser}"
+                            class="button is-small is-danger is-outlined"
+                            th:onclick="'retractVote(' + ${p.id} + ')'">✕ Unvote</button>
                   </div>
                 </div>
               </div>
-
-              <div
-                id="proposal-input-row"
-                th:style="${view.currentUserStatus?.name() == 'ORDERING'} ? '' : 'display:none'"
-                class="field has-addons mt-4"
-              >
+              <div id="proposal-input-row"
+                   th:style="${view.currentUserStatus?.name() == 'ORDERING'} ? '' : 'display:none'"
+                   class="field has-addons mt-4">
                 <div class="control is-expanded">
-                  <input
-                    id="restaurant-input"
-                    class="input"
-                    type="text"
-                    placeholder="Suggest a restaurant…"
-                    onkeydown="if (event.key === 'Enter') addProposal();"
-                  />
+                  <input id="restaurant-input" class="input" type="text"
+                         placeholder="Suggest a restaurant…"
+                         onkeydown="if (event.key === 'Enter') addProposal();" />
                 </div>
                 <div class="control">
-                  <button class="button is-primary" onclick="addProposal()">
-                    Add
-                  </button>
+                  <button class="button is-primary" onclick="addProposal()">Add</button>
                 </div>
               </div>
             </div>
+
+            <!-- TIME PROPOSALS PANEL -->
+            <div id="time-proposals-panel" class="box">
+              <h2 class="subtitle mb-3"><strong>⏰ Pickup Time</strong></h2>
+              <div id="time-proposals-list">
+                <div th:if="${#lists.isEmpty(view.timeProposals)}"
+                     class="has-text-grey has-text-centered py-4">
+                  No times proposed yet. Suggest when to go pick up!
+                </div>
+                <div class="proposal-row level is-mobile mb-3"
+                     th:each="tp : ${view.timeProposals}">
+                  <div class="level-left">
+                    <div>
+                      <span class="has-text-weight-semibold" th:text="${tp.proposedTime}"></span>
+                      <span class="has-text-grey-light is-size-7 ml-2"
+                            th:text="'by ' + ${tp.proposedBy}"></span>
+                      <span class="tag is-warning is-light ml-2"
+                            th:text="${tp.voteCount} + (${tp.voteCount} == 1 ? ' vote' : ' votes')"></span>
+                    </div>
+                  </div>
+                  <div class="level-right">
+                    <button th:if="${!tp.votedByCurrentUser}"
+                            class="button is-small is-warning is-outlined"
+                            th:onclick="'castTimeVote(' + ${tp.id} + ')'">👍 Vote</button>
+                    <button th:if="${tp.votedByCurrentUser}"
+                            class="button is-small is-danger is-outlined"
+                            th:onclick="'retractTimeVote(' + ${tp.id} + ')'">✕ Unvote</button>
+                  </div>
+                </div>
+              </div>
+              <!-- Anyone can propose a time (not gated on status) -->
+              <div id="time-input-row" class="field has-addons mt-4">
+                <div class="control">
+                  <input id="time-input" class="input" type="time"
+                         placeholder="12:30"
+                         onkeydown="if (event.key === 'Enter') addTimeProposal();" />
+                </div>
+                <div class="control">
+                  <button class="button is-warning" onclick="addTimeProposal()">Propose</button>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <!-- RIGHT COLUMN: participants -->
@@ -150,24 +190,21 @@
             <div id="participants-panel" class="box">
               <h2 class="subtitle mb-3"><strong>Who's Here</strong></h2>
               <div id="participants-list">
-                <div
-                  class="participant-row level is-mobile mb-2"
-                  th:each="p : ${view.participants}"
-                >
+                <div class="participant-row level is-mobile mb-2"
+                     th:each="p : ${view.participants}">
                   <div class="level-left">
                     <span th:text="${p.userName}"></span>
                   </div>
                   <div class="level-right">
-                    <span
-                      class="tag"
-                      th:classappend="${p.status?.name() == 'HAS_FOOD'} ? 'is-success is-light' : (${p.status?.name() == 'ORDERING'} ? 'is-warning is-light' : 'is-light')"
-                      th:text="${p.status != null} ? ${p.status.name().replace('_', ' ')} : 'Undecided'"
-                    ></span>
+                    <span class="tag"
+                          th:classappend="${p.status?.name() == 'HAS_FOOD'} ? 'is-success is-light' : (${p.status?.name() == 'ORDERING'} ? 'is-warning is-light' : 'is-light')"
+                          th:text="${p.status != null} ? ${p.status.name().replace('_', ' ')} : 'Undecided'"></span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </section>

@@ -16,4 +16,6 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
     @Query("SELECT p FROM Participant p WHERE LOWER(p.userName) = LOWER(:name) AND p.session = :session")
     Optional<Participant> findByUserNameIgnoreCaseAndSession(@Param("name") String name,
                                                              @Param("session") DailySession session);
+
+    Optional<Participant> findByIpAddressAndSession(String ipAddress, DailySession session);
 }

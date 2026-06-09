@@ -30,14 +30,26 @@ public class TakeoutController {
         return "redirect:/today";
     }
 
+    /**
+     * If the user has a valid cookie → show the page normally.
+     * If not → still show the page but with needsName=true so the
+     * inline name-entry modal appears. No redirect to /join.
+     */
     @GetMapping("/today")
     public String today(HttpServletRequest request, Model model) {
-        return cookieHelper.readUser(request).map(userName -> {
-            model.addAttribute("view", takeoutService.getDailyView(userName, LocalDate.now()));
-            return "index";
-        }).orElse("redirect:/join");
+        var maybeUser = cookieHelper.readUser(request);
+        if (maybeUser.isPresent()) {
+            model.addAttribute("view", takeoutService.getDailyView(maybeUser.get(), LocalDate.now()));
+            model.addAttribute("needsName", false);
+        } else {
+            // Provide a minimal placeholder view so Thymeleaf doesn't NPE on th:text="${view.currentUser}"
+            model.addAttribute("view", takeoutService.getDailyView("", LocalDate.now()));
+            model.addAttribute("needsName", true);
+        }
+        return "index";
     }
 
+    // /join is still available as a standalone page (e.g. direct link)
     @GetMapping("/join")
     public String joinForm(Model model) {
         model.addAttribute("joinForm", new JoinForm());
@@ -53,12 +65,21 @@ public class TakeoutController {
             return "join";
         }
         try {
-            var participant = takeoutService.registerParticipant(joinForm.getName(), LocalDate.now());
+            String ip = getClientIp(request);
+            var participant = takeoutService.registerParticipant(joinForm.getName(), LocalDate.now(), ip);
             cookieHelper.writeUser(response, participant.getUserName());
             return "redirect:/today";
         } catch (DuplicateNameException e) {
             result.rejectValue("name", "duplicate", "This name is already taken today. Please choose another.");
             return "join";
         }
+    }
+
+    static String getClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

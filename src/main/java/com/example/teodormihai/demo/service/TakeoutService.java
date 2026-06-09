@@ -17,15 +17,21 @@ public class TakeoutService {
     private final ParticipantRepository participantRepo;
     private final ProposalRepository proposalRepo;
     private final VoteRepository voteRepo;
+    private final TimeProposalRepository timeProposalRepo;
+    private final TimeVoteRepository timeVoteRepo;
 
     public TakeoutService(DailySessionRepository sessionRepo,
                           ParticipantRepository participantRepo,
                           ProposalRepository proposalRepo,
-                          VoteRepository voteRepo) {
+                          VoteRepository voteRepo,
+                          TimeProposalRepository timeProposalRepo,
+                          TimeVoteRepository timeVoteRepo) {
         this.sessionRepo = sessionRepo;
         this.participantRepo = participantRepo;
         this.proposalRepo = proposalRepo;
         this.voteRepo = voteRepo;
+        this.timeProposalRepo = timeProposalRepo;
+        this.timeVoteRepo = timeVoteRepo;
     }
 
     public DailySession getOrCreateSession(LocalDate date) {
@@ -38,16 +44,42 @@ public class TakeoutService {
         });
     }
 
-    public Participant registerParticipant(String name, LocalDate date) {
+    /**
+     * Registers a participant for today.
+     *
+     * IP dedup: if this IP has already joined today, return the existing participant
+     * (so the caller can restore the cookie for that session). This handles the case
+     * where someone cleared cookies on the same machine.
+     *
+     * Name dedup: if the same name is already taken by a *different* IP, throw DuplicateNameException.
+     */
+    public Participant registerParticipant(String name, LocalDate date, String ipAddress) {
         final String trimmedName = name.trim();
         if (trimmedName.isBlank()) {
             throw new IllegalArgumentException("Name must not be blank");
         }
         DailySession session = getOrCreateSession(date);
+
+        // IP-based dedup: same IP already joined today → return existing participant
+        if (ipAddress != null && !ipAddress.isBlank()) {
+            var existing = participantRepo.findByIpAddressAndSession(ipAddress, session);
+            if (existing.isPresent()) {
+                return existing.get(); // caller should re-set cookie to existing name
+            }
+        }
+
+        // Name-based dedup: name already taken (by someone else)
         participantRepo.findByUserNameIgnoreCaseAndSession(trimmedName, session).ifPresent(p -> {
             throw new DuplicateNameException(trimmedName);
         });
-        return participantRepo.save(new Participant(trimmedName, null, session));
+
+        Participant participant = new Participant(trimmedName, null, session, ipAddress);
+        return participantRepo.save(participant);
+    }
+
+    // Keep original signature for backward compat (no IP)
+    public Participant registerParticipant(String name, LocalDate date) {
+        return registerParticipant(name, date, null);
     }
 
     public Participant setStatus(String userName, Long sessionId, ParticipantStatus status) {
@@ -89,11 +121,43 @@ public class TakeoutService {
         voteRepo.findByUserNameAndProposal(userName, proposal).ifPresent(voteRepo::delete);
     }
 
+    // ── Time proposals ────────────────────────────────────────────────────────
+
+    public TimeProposal addTimeProposal(String proposedTime, String proposedBy, Long sessionId) {
+        final String trimmed = proposedTime.trim();
+        DailySession session = sessionRepo.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+        timeProposalRepo.findByProposedTimeAndSession(trimmed, session).ifPresent(p -> {
+            throw new IllegalArgumentException("Time already proposed today: " + trimmed);
+        });
+        return timeProposalRepo.save(new TimeProposal(trimmed, proposedBy, session));
+    }
+
+    public TimeVote castTimeVote(String userName, Long timeProposalId) {
+        TimeProposal timeProposal = timeProposalRepo.findById(timeProposalId)
+                .orElseThrow(() -> new IllegalArgumentException("Time proposal not found"));
+        DailySession session = timeProposal.getSession();
+        // Remove any existing time vote by this user in this session (one vote at a time)
+        timeVoteRepo.findByUserNameAndTimeProposal_Session(userName, session).ifPresent(existing -> {
+            timeVoteRepo.delete(existing);
+            timeVoteRepo.flush();
+        });
+        return timeVoteRepo.save(new TimeVote(userName, timeProposal));
+    }
+
+    public void retractTimeVote(Long timeProposalId, String userName) {
+        TimeProposal timeProposal = timeProposalRepo.findById(timeProposalId)
+                .orElseThrow(() -> new IllegalArgumentException("Time proposal not found"));
+        timeVoteRepo.findByUserNameAndTimeProposal(userName, timeProposal).ifPresent(timeVoteRepo::delete);
+    }
+
+    // ── View ──────────────────────────────────────────────────────────────────
+
     @Transactional(readOnly = true)
     public DailyViewDto getDailyView(String userName, LocalDate date) {
         DailySession session = sessionRepo.findBySessionDate(date).orElse(null);
         if (session == null) {
-            return new DailyViewDto(null, date, userName, null, List.of(), List.of());
+            return new DailyViewDto(null, date, userName, null, List.of(), List.of(), List.of());
         }
 
         Participant currentParticipant = participantRepo
@@ -114,6 +178,18 @@ public class TakeoutService {
                 ))
                 .toList();
 
-        return new DailyViewDto(session.getId(), date, userName, currentStatus, participants, proposals);
+        List<DailyViewDto.TimeProposalDto> timeProposals =
+                timeProposalRepo.findBySessionOrderByProposedTime(session).stream()
+                        .map(tp -> new DailyViewDto.TimeProposalDto(
+                                tp.getId(),
+                                tp.getProposedTime(),
+                                tp.getProposedBy(),
+                                timeVoteRepo.countByTimeProposal(tp),
+                                timeVoteRepo.existsByUserNameAndTimeProposal(userName, tp)
+                        ))
+                        .toList();
+
+        return new DailyViewDto(session.getId(), date, userName, currentStatus,
+                participants, proposals, timeProposals);
     }
 }
