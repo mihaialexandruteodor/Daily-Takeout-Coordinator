@@ -1,5 +1,6 @@
 package com.example.teodormihai.demo.web;
 
+import com.example.teodormihai.demo.dto.DailyViewDto;
 import com.example.teodormihai.demo.service.DuplicateNameException;
 import com.example.teodormihai.demo.service.TakeoutService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Controller
 public class TakeoutController {
@@ -42,8 +44,10 @@ public class TakeoutController {
             model.addAttribute("view", takeoutService.getDailyView(maybeUser.get(), LocalDate.now()));
             model.addAttribute("needsName", false);
         } else {
-            // Provide a minimal placeholder view so Thymeleaf doesn't NPE on th:text="${view.currentUser}"
-            model.addAttribute("view", takeoutService.getDailyView("", LocalDate.now()));
+            // No cookie — render a blank view so Thymeleaf has something to bind to,
+            // and the name-entry modal will be displayed.
+            model.addAttribute("view", new DailyViewDto(
+                    null, LocalDate.now(), "", null, List.of(), List.of(), List.of()));
             model.addAttribute("needsName", true);
         }
         return "index";

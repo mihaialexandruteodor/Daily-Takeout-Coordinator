@@ -35,8 +35,9 @@
   <body class="has-background-light">
 
     <!-- ── Name-entry modal (shown when user has no cookie) ── -->
+    <!--/* Always render the modal div; JS hides it after join. Thymeleaf controls initial display. */-->
     <div id="name-modal-overlay" class="name-modal-overlay"
-         th:style="${needsName} ? '' : 'display:none'">
+         th:attr="style=${needsName} ? null : 'display:none'">
       <div class="name-modal-box">
         <div class="modal-icon">🍱</div>
         <h2>Who are you?</h2>
