@@ -1,16 +1,11 @@
 package com.example.teodormihai.demo.web;
 
 import com.example.teodormihai.demo.dto.DailyViewDto;
-import com.example.teodormihai.demo.service.DuplicateNameException;
 import com.example.teodormihai.demo.service.TakeoutService;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import java.time.LocalDate;
@@ -53,30 +48,16 @@ public class TakeoutController {
         return "index";
     }
 
-    // /join is still available as a standalone page (e.g. direct link)
+    // /join no longer exists as a page. Anyone hitting it (old links, bookmarks)
+    // gets redirected to /today, where the name modal handles onboarding.
     @GetMapping("/join")
-    public String joinForm(Model model) {
-        model.addAttribute("joinForm", new JoinForm());
-        return "join";
+    public String joinFormRedirect() {
+        return "redirect:/today";
     }
 
     @PostMapping("/join")
-    public String joinSubmit(@Valid @ModelAttribute JoinForm joinForm,
-                             BindingResult result,
-                             HttpServletRequest request,
-                             HttpServletResponse response) {
-        if (result.hasErrors()) {
-            return "join";
-        }
-        try {
-            String ip = getClientIp(request);
-            var participant = takeoutService.registerParticipant(joinForm.getName(), LocalDate.now(), ip);
-            cookieHelper.writeUser(response, participant.getUserName());
-            return "redirect:/today";
-        } catch (DuplicateNameException e) {
-            result.rejectValue("name", "duplicate", "This name is already taken today. Please choose another.");
-            return "join";
-        }
+    public String joinSubmitRedirect() {
+        return "redirect:/today";
     }
 
     static String getClientIp(HttpServletRequest request) {
