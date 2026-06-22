@@ -14,6 +14,14 @@ function showError(body) {
 
 // ── Name modal ────────────────────────────────────────────────────────────────
 
+function openNameModal() {
+    document.getElementById('name-modal-overlay').style.display = 'flex';
+    const input = document.getElementById('modal-name-input');
+    input.value = '';
+    document.getElementById('modal-name-error').textContent = '';
+    input.focus();
+}
+
 async function submitModalName() {
     const input = document.getElementById('modal-name-input');
     const errorEl = document.getElementById('modal-name-error');
@@ -43,8 +51,10 @@ async function submitModalName() {
         return;
     }
 
-    // Success: hide modal, patch the nav username, and render the view
+    // Success: hide modal + join button, update nav, render view
     document.getElementById('name-modal-overlay').style.display = 'none';
+    const joinBtn = document.getElementById('btn-join-modal');
+    if (joinBtn) joinBtn.style.display = 'none';
     const data = await res.json();
     const navUsername = document.getElementById('nav-username');
     if (navUsername) navUsername.textContent = '👋 ' + data.currentUser;

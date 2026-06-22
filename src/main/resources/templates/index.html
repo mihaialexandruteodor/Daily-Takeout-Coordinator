@@ -295,7 +295,15 @@
           <!-- RIGHT / PARTICIPANTS COLUMN -->
           <div class="column is-4" id="col-participants">
             <div id="participants-panel" class="box">
-              <h2 class="subtitle mb-3"><strong>Who's Here</strong></h2>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+                <h2 class="subtitle mb-0"><strong>Who's Here</strong></h2>
+                <button id="btn-join-modal"
+                        class="button is-small is-primary is-outlined"
+                        th:attr="style=${needsName} ? null : 'display:none'"
+                        onclick="openNameModal()">
+                  + Join
+                </button>
+              </div>
               <div id="participants-list">
                 <div class="participant-row" th:each="p : ${view.participants}">
                   <span th:text="${p.userName}"></span>
